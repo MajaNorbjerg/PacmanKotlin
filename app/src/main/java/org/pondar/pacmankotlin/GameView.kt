@@ -13,8 +13,8 @@ import android.view.View
 class GameView : View {
 
     private lateinit var game: Game
-    private var h: Int = 0
-    private var w: Int = 0 //used for storing our height and width of the view
+    public var h: Int = 0
+    public var w: Int = 0 //used for storing our height and width of the view
 
     fun setGame(game: Game) {
         this.game = game
@@ -45,20 +45,49 @@ class GameView : View {
         //if not initizlise them
         if (!(game.coinsInitialized))
             game.initializeGoldcoins()
+        if (!(game.enemiesInitialized))
+            game.initializeEnemies()
 
 
         //Making a new paint object
         val paint = Paint()
-        canvas.drawColor(Color.WHITE) //clear entire canvas to white color
+        canvas.drawColor(Color.rgb(173,216,230)) //clear entire canvas to white color
+
+        //TODO loop through the list of goldcoins and draw them here
+
+
+        for (i in 0 until game.coins.size) {
+            if (!game.coins[i].taken){
+            canvas.drawBitmap(
+                game.coinBitmap,
+                game.coins[i].coinX.toFloat(),
+                game.coins[i].coinY.toFloat(),
+                paint
+            )}
+        }
+
+
+        for (i in 0 until game.enemies.size) {
+            if (game.enemies[i].isAlive){
+                canvas.drawBitmap(
+                    game.enemyBitmap,
+                    game.enemies[i].enemyX.toFloat(),
+                    game.enemies[i].enemyY.toFloat(),
+                    paint
+                )}
+        }
 
         //draw the pacman
         canvas.drawBitmap(game.pacBitmap, game.pacx.toFloat(),
                 game.pacy.toFloat(), paint)
 
-        //TODO loop through the list of goldcoins and draw them here
+//        canvas.drawBitmap(game.pacBitmap, game.rotator, paint)
 
 
-        game.doCollisionCheck()
+
+
+
+        game.doCoinCollisionCheck()
         super.onDraw(canvas)
     }
 
