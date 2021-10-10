@@ -41,12 +41,17 @@ class GameView : View {
         game.setSize(h, w)
         Log.d("GAMEVIEW", "h = $h, w = $w")
 
+
         //are the coins initiazlied?
         //if not initizlise them
+        if (!(game.wallsInitialized))
+            game.initializeWalls()
         if (!(game.coinsInitialized))
             game.initializeGoldcoins()
         if (!(game.enemiesInitialized))
             game.initializeEnemies()
+
+
 
 
         //Making a new paint object
@@ -55,6 +60,15 @@ class GameView : View {
 
         //TODO loop through the list of goldcoins and draw them here
 
+        for (i in 0 until game.walls.size) {
+
+            canvas.drawBitmap(
+                game.wallBitmap,
+                game.walls[i].X.toFloat(),
+                game.walls[i].Y.toFloat(),
+                paint
+            )
+        }
 
         for (i in 0 until game.coins.size) {
             if (!game.coins[i].taken){
@@ -76,6 +90,9 @@ class GameView : View {
                     paint
                 )}
         }
+
+
+
 
         //draw the pacman
         canvas.drawBitmap(game.pacBitmap, game.pacx.toFloat(),

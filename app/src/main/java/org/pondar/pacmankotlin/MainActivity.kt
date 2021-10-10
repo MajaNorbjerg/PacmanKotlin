@@ -132,7 +132,7 @@ class MainActivity : AppCompatActivity(), OnClickListener {
             Toast.makeText(this, "settings clicked", Toast.LENGTH_LONG).show()
             return true
         } else if (id == R.id.action_newGame) {
-            Toast.makeText(this, "New Game clicked", Toast.LENGTH_LONG).show()
+            //Toast.makeText(this, "New Game clicked", Toast.LENGTH_LONG).show()
 
             game.currentLevel = game.levels[0]
             game.newGame()
@@ -197,7 +197,7 @@ class MainActivity : AppCompatActivity(), OnClickListener {
             }
             if( game.enemyBitmap == game.enemyResizedBitmap){ game.enemyBitmap = game.enemyResizedBitmap2 }else{ game.enemyBitmap = game.enemyResizedBitmap}
 
-            game.movePacman(game.direction, game.currentLevel.pacSpeed)
+            game.movePacman(game.direction)
             game.moveEnemies(game.currentLevel.enemySpeed)
 
         }

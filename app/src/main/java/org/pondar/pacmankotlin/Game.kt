@@ -3,7 +3,6 @@ package org.pondar.pacmankotlin
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.os.Handler
 import android.os.Looper
 import android.widget.TextView
@@ -11,8 +10,8 @@ import android.widget.Toast
 import org.pondar.pacmankotlin.databinding.ActivityMainBinding
 import java.util.ArrayList
 import kotlin.math.abs
-import kotlin.math.pow
-import kotlin.math.sqrt
+import kotlin.math.hypot
+import kotlin.math.roundToInt
 
 
 /**
@@ -52,11 +51,18 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
 
     var pacx: Int = 0
     var pacy: Int = 0
+    var halfPacWidth = 0
+    var halfPacHeight = 0
+
+    var pacGoFurtherUp = true
+    var pacGoFurtherDown = true
+    var pacGoFurtherRight = true
+    var pacGoFurtherLeft = true
 
 
     // coin
-    var coinBitmap: Bitmap
-    var coinResizedBitmap: Bitmap
+    lateinit var coinBitmap: Bitmap
+    lateinit var coinResizedBitmap: Bitmap
 
     // enemy
     var enemyBitmap: Bitmap
@@ -68,13 +74,18 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
     lateinit var coin: GoldCoin
     var coinsInitialized = false
     var enemiesInitialized = false
+    var wallsInitialized = false
 
     //the list of goldcoins - initially empty
     var coins = ArrayList<GoldCoin>()
     var enemies = ArrayList<Enemy>()
+    var walls = ArrayList<Wall>()
 
     var levels = ArrayList<Level>()
     lateinit var currentLevel: Level
+
+
+    var wallBitmap: Bitmap
 
     //a reference to the gameview
     private lateinit var gameView: GameView
@@ -93,26 +104,31 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
             BitmapFactory.decodeResource(
                 context.resources,
                 R.drawable.pacman
-            ), pacDiameter, pacDiameter, true
+            ), pacDiameter.toInt(), pacDiameter.toInt(), true
         )
         pacResizedBitmap2 = Bitmap.createScaledBitmap(
             BitmapFactory.decodeResource(
                 context.resources,
                 R.drawable.pacman2
-            ), pacDiameter, pacDiameter, true
+            ), pacDiameter.toInt(), pacDiameter.toInt(), true
         )
         pacResizedBitmap3 = Bitmap.createScaledBitmap(
             BitmapFactory.decodeResource(
                 context.resources,
                 R.drawable.pacman3
-            ), pacDiameter, pacDiameter, true
+            ), pacDiameter.toInt(), pacDiameter.toInt(), true
         )
-
-
-        coinResizedBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.coin)
-
         pacBitmap = pacResizedBitmap
-        coinBitmap = Bitmap.createScaledBitmap(coinResizedBitmap, 100, 100, true)
+        halfPacWidth = pacBitmap.width / 2
+        halfPacHeight = pacBitmap.height / 2
+
+//        coinResizedBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.coin)
+//
+//
+//        coinBitmap = Bitmap.createScaledBitmap(coinResizedBitmap, 100, 100, true)
+
+        wallBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.wall)
+        wallBitmap = Bitmap.createScaledBitmap(wallBitmap, pacBitmap.width, pacBitmap.height, true)
 
         var enemyDiameter = 100
         enemyResizedBitmap = Bitmap.createScaledBitmap(
@@ -131,11 +147,12 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
         enemyBitmap = enemyResizedBitmap
 
         for (i in 1..3) {
-            levels.add(Level(i, 2 + i, 30, 10+(i*2), 2+i))
+            levels.add(Level(i, 9 + i, 33, 10 + i, 0, 4 + i * 2))
         }
         currentLevel = levels[0]
 
     }
+
 
     fun setGameView(view: GameView) {
         this.gameView = view
@@ -143,6 +160,11 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
 
     //TODO initialize goldcoins also here
     fun initializeGoldcoins() {
+
+        coinResizedBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.coin)
+
+
+        coinBitmap = Bitmap.createScaledBitmap(coinResizedBitmap, 100, 100, true)
         //DO Stuff to initialize the array list with some coins.
         // coins = coin.coinArray()
         println("Try and getGAMGE with: ${gameView.w}, height: ${gameView.h}")
@@ -150,15 +172,43 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
 //        println("GameView height: ${gameView.height}, ${gameView.width}")
         var coinMaxX: Int = gameView.w - coinBitmap.width
         var coinMaxY: Int = gameView.h - coinBitmap.height
-        var coinRangeX = (0..coinMaxX)
-        var coinRangeY = (0..coinMaxY)
-        println("coinMAXX: $coinMaxX, coinMAXY: $coinMaxY")
+        var RangeX = (0..coinMaxX)
+        var RangeY = (0..coinMaxY)
 
-        for (i in 0 until currentLevel.numberOfCoins)
-            coins.add(GoldCoin(coinRangeX.random(), coinRangeY.random()))
-//
-//        for (coin in coins)
-//        println("Coinslist ${coin.coinX}, ${coin.coinY}")
+        var pacCenterX = pacx + pacBitmap.width / 2
+        var pacCenterY = pacy + pacBitmap.height / 2
+
+
+//        for (i in 0 until currentLevel.numberOfCoins)
+//            coins.add(GoldCoin(RangeX.random(), RangeY.random()))
+
+
+        for (i in 0 until currentLevel.numberOfCoins) {
+            var setX = RangeX.random()
+            var setY = RangeY.random()
+
+            var awayFromWalls = walls.none {
+                calculateDistance(
+                    it.X + wallBitmap.width / 2,
+                    it.Y + wallBitmap.height / 2,
+                    setX + coinBitmap.width / 2,
+                    setY + coinBitmap.height / 2
+                ) < 100
+            }
+            while (!awayFromWalls) {
+                setX = RangeX.random()
+                setY = RangeY.random()
+                awayFromWalls = walls.none {
+                    calculateDistance(
+                        it.X + wallBitmap.width / 2,
+                        it.Y + wallBitmap.height / 2,
+                        setX + coinBitmap.width / 2,
+                        setY + coinBitmap.height / 2
+                    ) < 100
+                }
+            }
+            coins.add(GoldCoin(setX, setY))
+        }
         coinsInitialized = true
     }
 
@@ -190,7 +240,7 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
                 setEnemyY + enemyBitmap.height / 2
             )
 
-            while (distToPac < 500){
+            while (distToPac < 500) {
                 setEnemyX = RangeX.random()
                 setEnemyY = RangeX.random()
                 distToPac = calculateDistance(
@@ -209,7 +259,35 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
     }
 
 
+    fun initializeWalls() {
+
+        walls.clear()
+        var MaxX: Int = gameView.w
+        var MaxY: Int = gameView.h
+        var rangeX = (0..MaxX)
+        var rangeY = (0..MaxY)
+        var intervalX = wallBitmap.width
+        var intervalY = wallBitmap.width
+
+        for (i in 0 until currentLevel.numberOfWalls)
+            walls.add(
+                Wall(
+                    (intervalX * ((rangeX.random() / intervalX.toFloat())).roundToInt()),
+                    (intervalY * ((rangeY.random() / intervalY.toFloat())).roundToInt())
+                )
+            )
+
+
+
+        wallsInitialized = true
+    }
+
     fun newGame() {
+
+        if (gameOver) {
+            points = 0
+        }
+
         gameOver = false
         //running = true
         direction = RIGHT
@@ -218,16 +296,22 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
         //reset the points
         coinsInitialized = false
         enemiesInitialized = false
-        points = 0
+
         pointsView.text = "${context.resources.getString(R.string.points)} $points"
 
         if (gameView.w != 0 && gameView.h != 0) {
+            initializeWalls()
             initializeGoldcoins()
             initializeEnemies()
+
         }
         gameView.invalidate() //redraw screen
-
-        Toast.makeText(context, "You are now at level ${currentLevel.levelNumber} - watch out for more enemies", Toast.LENGTH_LONG).show()
+        if (currentLevel.levelNumber != 1)
+            Toast.makeText(
+                context,
+                "You are now at level ${currentLevel.levelNumber} - watch out for more enemies",
+                Toast.LENGTH_LONG
+            ).show()
 
         handler.postDelayed({
             running = true
@@ -239,31 +323,51 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
         this.w = w
     }
 
-    fun movePacman(direction: Int, pixels: Int) {
+
+
+
+    fun movePacman(direction: Int) {
+        var pixels = currentLevel.pacSpeed
+
+        var minDistToPac = 20
+
+
+
+
         when (direction) {
             RIGHT -> {
-                if (pacx + pixels + pacBitmap.width < w)
-                    pacx = pacx + pixels
+                if (pacx + pixels + pacBitmap.width <= w && pacGoFurtherRight)
+                    pacx += pixels
+                else if (pacx + pixels + pacBitmap.width > w  && pacGoFurtherRight)
+                    pacx = w - pacBitmap.width
+
 
             }
             DOWN -> {
-                if (pacy + pixels + pacBitmap.height < h)
-                    pacy = pacy + pixels
+                if (pacy + pixels + pacBitmap.height <= h && pacGoFurtherDown)
+                    pacy += pixels
+                else if (pacy + pixels + pacBitmap.height > h && pacGoFurtherDown)
+                    pacy = h - pacBitmap.height
             }
             LEFT -> {
-                if (pacx - pixels + pacBitmap.width > 0 + pacBitmap.width)
-                    pacx = pacx - pixels
+                if (pacx - pixels + pacBitmap.width >= 0 + pacBitmap.width && pacGoFurtherLeft)
+                    pacx -= pixels
+                else if (pacx - pixels + pacBitmap.width < 0 + pacBitmap.width && pacGoFurtherLeft)
+                    pacx = 0
 
             }
 
             UP -> {
-                if (pacy - pixels + pacBitmap.height > 0 + pacBitmap.height)
-                    pacy = pacy - pixels
+                if (pacy - pixels + pacBitmap.height >= 0 + pacBitmap.height && pacGoFurtherUp)
+                    pacy -= pixels
+                else if (pacy - pixels + pacBitmap.height < 0 + pacBitmap.height && pacGoFurtherUp)
+                    pacy = 0
             }
         }
         doCoinCollisionCheck()
         gameView.invalidate()
     }
+
 
     fun moveEnemies(pixels: Int) {
         for (enemy in enemies) {
@@ -299,11 +403,24 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
     }
 
     //TODO check if the pacman touches a gold coin
-    //and if yes, then update the neccesseary data
-    //for the gold coins and the points
-    //so you need to go through the arraylist of goldcoins and
-    //check each of them for a collision with the pacman
+//and if yes, then update the neccesseary data
+//for the gold coins and the points
+//so you need to go through the arraylist of goldcoins and
+//check each of them for a collision with the pacman
     fun doCoinCollisionCheck() {
+
+        var pacCenterX = pacx + pacBitmap.width / 2
+        var pacCenterY = pacy + pacBitmap.height / 2
+        var pacUpX = pacx + pacBitmap.width / 2
+        var pacUpY = pacy
+        var pacDownX = pacx + pacBitmap.width / 2
+        var pacDownY = pacy + pacBitmap.height
+        var pacRightX = pacx + pacBitmap.width
+        var pacRightY = pacy + pacBitmap.height / 2
+        var pacLeftX = pacx
+        var pacLeftY = pacy + pacBitmap.height / 2
+
+
         var coinsTaken = 0
         for (coin in coins) {
             if (!coin.taken) {
@@ -336,9 +453,10 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
             if (dist < enemyBitmap.width / 2) {
                 gameOver = true
                 running = false
-                Toast.makeText(context, "You got eaten by a redface", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "You got eaten by a purpleface", Toast.LENGTH_LONG)
+                    .show()
             }
-            //fdsdkjfldsk
+
         }
 
         if (coins.filter { !it.taken }.isNullOrEmpty()) {
@@ -348,7 +466,7 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
                 println("You win")
                 Toast.makeText(context, "You win", Toast.LENGTH_LONG).show()
             } else {
-                gameOver = true
+                gameOver = false
                 running = false
                 var currentIndex = levels.indexOf(currentLevel)
                 currentLevel = levels[currentIndex + 1]
@@ -359,15 +477,138 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
             }
 
         }
+
+
+    var minDistToPac = 20
+
+    // Can go up?
+    // ----------------------------------------------------
+    wallLoop@ for (wall in walls) {
+        var wallUpX = wall.X + wallBitmap.width / 2
+        var wallUpY = wall.Y
+        var wallDownX = wall.X + wallBitmap.width / 2
+        var wallDownY = wall.Y + wallBitmap.height
+        var wallRightX = wall.X + wallBitmap.width
+        var wallRightY = wall.Y + wallBitmap.height / 2
+        var wallLeftX = wall.X
+        var wallLeftY = wall.Y + wallBitmap.height / 2
+        var wallCenterX = wall.X + wallBitmap.width / 2
+        var wallCenterY = wall.Y + wallBitmap.height / 2
+        for (x in wall.X until wall.X + wallBitmap.width) {
+            if (abs(wallDownY - pacUpY) < minDistToPac && pacCenterX > wallLeftX - pacBitmap.width / 2 && pacCenterX < wallRightX + pacBitmap.width / 2) {
+                pacy = wallDownY
+                pacGoFurtherUp = false
+                break@wallLoop
+            } else {
+                pacGoFurtherUp = true
+            }
+        }
+    }
+
+    // Can go down?
+    // ----------------------------------------------------
+    wallLoop@ for (wall in walls) {
+        var wallUpX = wall.X + wallBitmap.width / 2
+        var wallUpY = wall.Y
+        var wallDownX = wall.X + wallBitmap.width / 2
+        var wallDownY = wall.Y + wallBitmap.height
+        var wallRightX = wall.X + wallBitmap.width
+        var wallRightY = wall.Y + wallBitmap.height / 2
+        var wallLeftX = wall.X
+        var wallLeftY = wall.Y + wallBitmap.height / 2
+        var wallCenterX = wall.X + wallBitmap.width / 2
+        var wallCenterY = wall.Y + wallBitmap.height / 2
+        for (x in wall.X until wall.X + wallBitmap.width) {
+            if (abs(wallUpY - pacDownY) < minDistToPac && pacCenterX > wallLeftX - pacBitmap.width / 2 && pacCenterX < wallRightX + pacBitmap.width / 2) {
+                pacy = wallUpY-pacBitmap.height
+                pacGoFurtherDown = false
+                break@wallLoop
+            } else {
+                pacGoFurtherDown = true
+            }
+        }
+    }
+
+
+    // Can go right?
+    // ----------------------------------------------------
+    wallLoop@ for (wall in walls) {
+        var wallUpX = wall.X + wallBitmap.width / 2
+        var wallUpY = wall.Y
+        var wallDownX = wall.X + wallBitmap.width / 2
+        var wallDownY = wall.Y + wallBitmap.height
+        var wallRightX = wall.X + wallBitmap.width
+        var wallRightY = wall.Y + wallBitmap.height / 2
+        var wallLeftX = wall.X
+        var wallLeftY = wall.Y + wallBitmap.height / 2
+        var wallCenterX = wall.X + wallBitmap.width / 2
+        var wallCenterY = wall.Y + wallBitmap.height / 2
+        for (y in wall.Y until wall.Y + wallBitmap.height) {
+            if (abs(wallLeftX - pacRightX) < minDistToPac && pacCenterY > wallUpY - pacBitmap.height / 2 && pacCenterY < wallDownY + pacBitmap.height / 2) {
+                pacx = wallLeftX-pacBitmap.width
+                pacGoFurtherRight = false
+                break@wallLoop
+            } else {
+                pacGoFurtherRight = true
+            }
+        }
+    }
+
+    // Can go left?
+    // ----------------------------------------------------
+    wallLoop@ for (wall in walls) {
+        var wallUpX = wall.X + wallBitmap.width / 2
+        var wallUpY = wall.Y
+        var wallDownX = wall.X + wallBitmap.width / 2
+        var wallDownY = wall.Y + wallBitmap.height
+        var wallRightX = wall.X + wallBitmap.width
+        var wallRightY = wall.Y + wallBitmap.height / 2
+        var wallLeftX = wall.X
+        var wallLeftY = wall.Y + wallBitmap.height / 2
+        var wallCenterX = wall.X + wallBitmap.width / 2
+        var wallCenterY = wall.Y + wallBitmap.height / 2
+        for (y in wall.Y until wall.Y + wallBitmap.height) {
+            if (abs(wallRightX - pacLeftX) < minDistToPac && pacCenterY > wallUpY - pacBitmap.height / 2 && pacCenterY < wallDownY + pacBitmap.height / 2) {
+                pacx = wallRightX
+                pacGoFurtherLeft = false
+                break@wallLoop
+            } else {
+                pacGoFurtherLeft = true
+            }
+        }
+    }
+
+
+    }
+
+    private fun intersecting(pacCenterX: Int, pacCenterY: Int, wall: Wall): Boolean {
+        val halfWidth = wallBitmap.width / 2
+        val halfHeight = wallBitmap.height / 2
+
+        val xDistance = Math.abs(pacCenterX - wall.X + halfWidth)
+        val yDistance = Math.abs(pacCenterY - wall.Y + halfHeight)
+
+        if (xDistance > halfWidth + pacBitmap.width / 2) return false
+        if (yDistance > halfHeight + pacBitmap.height / 2) return false
+
+        if (xDistance <= halfWidth) return true
+        if (yDistance <= halfHeight) return true
+
+        val xCornerDistance = xDistance - halfWidth
+        val yCornerDistance = yDistance - halfHeight
+        val squaredCornerDistance =
+            xCornerDistance * xCornerDistance + yCornerDistance * yCornerDistance
+        return (squaredCornerDistance <= pacBitmap.width / 2 * pacBitmap.width / 2)
     }
 
     private fun calculateDistance(x1: Int, y1: Int, x2: Int, y2: Int): Float {
         // calculate distance and return it
 
-        var c =
-            sqrt(((x1.toFloat() - x2.toFloat()).pow(2f)) + ((y1.toFloat() - y2.toFloat()).pow(2f))).toFloat()
-        println("c is with *: ${c}")
-        return c
+        return hypot(x1.toFloat() - x2.toFloat(), y1.toFloat() - y2.toFloat())
+//        var c =
+//            sqrt(((x1.toFloat() - x2.toFloat()).pow(2f)) + ((y1.toFloat() - y2.toFloat()).pow(2f))).toFloat()
+//        println("c is with *: ${c}")
+//        return c
     }
 
 
