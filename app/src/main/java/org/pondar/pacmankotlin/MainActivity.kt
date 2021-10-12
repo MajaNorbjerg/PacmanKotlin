@@ -22,9 +22,6 @@ class MainActivity : AppCompatActivity(), OnClickListener {
 
     private var pacmanTimer: Timer = Timer()
     private var counterTimer: Timer = Timer()
-    private var countdownTimer: Timer = Timer()
-
-
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -101,21 +98,11 @@ class MainActivity : AppCompatActivity(), OnClickListener {
             }
         }, 0, 1000)
 
-        countdownTimer.schedule(object : TimerTask() {
-            override fun run() {
-                countdownTimerMethod()
-            }
-        }, 0, 1000)
-
     }
 
     private fun counterTimerMethod() {
         this.runOnUiThread(counterTimerTick)
     }
-    private fun countdownTimerMethod() {
-        this.runOnUiThread(countdownTimerTick)
-    }
-
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -132,8 +119,6 @@ class MainActivity : AppCompatActivity(), OnClickListener {
             Toast.makeText(this, "settings clicked", Toast.LENGTH_LONG).show()
             return true
         } else if (id == R.id.action_newGame) {
-            //Toast.makeText(this, "New Game clicked", Toast.LENGTH_LONG).show()
-
             game.currentLevel = game.levels[0]
             game.newGame()
             game.counter = 60
@@ -154,8 +139,7 @@ class MainActivity : AppCompatActivity(), OnClickListener {
                 game.running = false
                 game.gameOver = true
             }
-        }
-        else{
+        } else {
             Log.d("countdown", "${game.counter}")
         }
         binding.textView.text = "Timer value: ${game.counter}"
@@ -190,35 +174,27 @@ class MainActivity : AppCompatActivity(), OnClickListener {
         // so we can draw
         if (game.running) {
             when (game.pacBitmap) {
-                game.pacResizedBitmap -> { game.pacBitmap = game.pacResizedBitmap2 }
-                game.pacResizedBitmap2 -> { game.pacBitmap = game.pacResizedBitmap3 }
-                game.pacResizedBitmap3 -> { game.pacBitmap = game.pacResizedBitmap }
-                else -> { game.pacBitmap = game.pacResizedBitmap}
+                game.pacResizedBitmap -> {
+                    game.pacBitmap = game.pacResizedBitmap2
+                }
+                game.pacResizedBitmap2 -> {
+                    game.pacBitmap = game.pacResizedBitmap3
+                }
+                game.pacResizedBitmap3 -> {
+                    game.pacBitmap = game.pacResizedBitmap
+                }
+                else -> {
+                    game.pacBitmap = game.pacResizedBitmap
+                }
             }
-            if( game.enemyBitmap == game.enemyResizedBitmap){ game.enemyBitmap = game.enemyResizedBitmap2 }else{ game.enemyBitmap = game.enemyResizedBitmap}
-
+            if (game.enemyBitmap == game.enemyResizedBitmap) {
+                game.enemyBitmap = game.enemyResizedBitmap2
+            } else {
+                game.enemyBitmap = game.enemyResizedBitmap
+            }
             game.movePacman(game.direction)
             game.moveEnemies(game.currentLevel.enemySpeed)
-
         }
-    }
-
-
-    private val countdownTimerTick = Runnable {
-//        if (game.running) {
-//            if (game.counter > 0 && game.coins.filter { !it.taken }.any()) {
-//                game.counter--
-//
-//            } else {
-//                Toast.makeText(this, "Game over you didnt make it", Toast.LENGTH_LONG).show()
-//                game.running = false
-//                game.gameOver = true
-//            }
-//        }
-//        else{
-//            Log.d("countdown", "${game.counter}")
-//        }
-//        binding.textView.text = "Timer value: ${game.counter}"
     }
 
 
@@ -230,13 +206,5 @@ class MainActivity : AppCompatActivity(), OnClickListener {
         } else if (v.id == R.id.stopButton) {
             game.running = false
         }
-//        else if (v.id == R.id.action_newGame) {
-//            counter = 60
-//            game.newGame()
-//            game.running = true
-//
-//            binding.textView.text = "Timer value: $counter"
-//
-//        }
     }
 }

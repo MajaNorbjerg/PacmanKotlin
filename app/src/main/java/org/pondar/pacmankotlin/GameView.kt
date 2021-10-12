@@ -29,7 +29,11 @@ class GameView : View {
     constructor(context: Context, attrs: AttributeSet) : super(context, attrs)
 
 
-    constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
+    constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int) : super(
+        context,
+        attrs,
+        defStyleAttr
+    )
 
     //In the onDraw we put all our code that should be
     //drawn whenever we update the screen.
@@ -52,11 +56,9 @@ class GameView : View {
             game.initializeEnemies()
 
 
-
-
         //Making a new paint object
         val paint = Paint()
-        canvas.drawColor(Color.rgb(173,216,230)) //clear entire canvas to white color
+        canvas.drawColor(Color.rgb(173, 216, 230)) //clear entire canvas to white color
 
         //TODO loop through the list of goldcoins and draw them here
 
@@ -71,37 +73,36 @@ class GameView : View {
         }
 
         for (i in 0 until game.coins.size) {
-            if (!game.coins[i].taken){
-            canvas.drawBitmap(
-                game.coinBitmap,
-                game.coins[i].coinX.toFloat(),
-                game.coins[i].coinY.toFloat(),
-                paint
-            )}
+            if (!game.coins[i].taken) {
+                canvas.drawBitmap(
+                    game.coinBitmap,
+                    game.coins[i].coinX.toFloat(),
+                    game.coins[i].coinY.toFloat(),
+                    paint
+                )
+            }
         }
 
 
         for (i in 0 until game.enemies.size) {
-            if (game.enemies[i].isAlive){
+            if (game.enemies[i].isAlive) {
                 canvas.drawBitmap(
                     game.enemyBitmap,
                     game.enemies[i].enemyX.toFloat(),
                     game.enemies[i].enemyY.toFloat(),
                     paint
-                )}
+                )
+            }
         }
 
 
-
-
         //draw the pacman
-        canvas.drawBitmap(game.pacBitmap, game.pacx.toFloat(),
-                game.pacy.toFloat(), paint)
+        canvas.drawBitmap(
+            game.pacBitmap, game.pacx.toFloat(),
+            game.pacy.toFloat(), paint
+        )
 
 //        canvas.drawBitmap(game.pacBitmap, game.rotator, paint)
-
-
-
 
 
         game.doCoinCollisionCheck()

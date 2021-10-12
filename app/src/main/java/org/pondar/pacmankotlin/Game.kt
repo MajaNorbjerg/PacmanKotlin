@@ -3,8 +3,10 @@ package org.pondar.pacmankotlin
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.nfc.Tag
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.widget.TextView
 import android.widget.Toast
 import org.pondar.pacmankotlin.databinding.ActivityMainBinding
@@ -75,6 +77,7 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
     var coinsInitialized = false
     var enemiesInitialized = false
     var wallsInitialized = false
+    var pacInitialized = false
 
     //the list of goldcoins - initially empty
     var coins = ArrayList<GoldCoin>()
@@ -146,8 +149,8 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
 
         enemyBitmap = enemyResizedBitmap
 
-        for (i in 1..3) {
-            levels.add(Level(i, 9 + i, 33, 10 + i, 0, 4 + i * 2))
+        for (i in 1..10) {
+            levels.add(Level(i, 9 + i, 33, 10, i, 3 + i))
         }
         currentLevel = levels[0]
 
@@ -193,7 +196,7 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
                     it.Y + wallBitmap.height / 2,
                     setX + coinBitmap.width / 2,
                     setY + coinBitmap.height / 2
-                ) < 100
+                ) < wallBitmap.width
             }
             while (!awayFromWalls) {
                 setX = RangeX.random()
@@ -204,7 +207,7 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
                         it.Y + wallBitmap.height / 2,
                         setX + coinBitmap.width / 2,
                         setY + coinBitmap.height / 2
-                    ) < 100
+                    ) < wallBitmap.width
                 }
             }
             coins.add(GoldCoin(setX, setY))
@@ -252,9 +255,6 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
             }
             enemies.add(Enemy(setEnemyX, setEnemyY))
         }
-//
-//        for (coin in coins)
-//        println("Coinslist ${coin.coinX}, ${coin.coinY}")
         enemiesInitialized = true
     }
 
@@ -262,6 +262,7 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
     fun initializeWalls() {
 
         walls.clear()
+
         var MaxX: Int = gameView.w
         var MaxY: Int = gameView.h
         var rangeX = (0..MaxX)
@@ -276,9 +277,6 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
                     (intervalY * ((rangeY.random() / intervalY.toFloat())).roundToInt())
                 )
             )
-
-
-
         wallsInitialized = true
     }
 
@@ -289,10 +287,11 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
         }
 
         gameOver = false
-        //running = true
         direction = RIGHT
+
         pacx = 50
         pacy = 400 //just some starting coordinates - you can change this.
+
         //reset the points
         coinsInitialized = false
         enemiesInitialized = false
@@ -303,8 +302,8 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
             initializeWalls()
             initializeGoldcoins()
             initializeEnemies()
-
         }
+
         gameView.invalidate() //redraw screen
         if (currentLevel.levelNumber != 1)
             Toast.makeText(
@@ -324,24 +323,15 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
     }
 
 
-
-
     fun movePacman(direction: Int) {
         var pixels = currentLevel.pacSpeed
-
-        var minDistToPac = 20
-
-
-
 
         when (direction) {
             RIGHT -> {
                 if (pacx + pixels + pacBitmap.width <= w && pacGoFurtherRight)
                     pacx += pixels
-                else if (pacx + pixels + pacBitmap.width > w  && pacGoFurtherRight)
+                else if (pacx + pixels + pacBitmap.width > w && pacGoFurtherRight)
                     pacx = w - pacBitmap.width
-
-
             }
             DOWN -> {
                 if (pacy + pixels + pacBitmap.height <= h && pacGoFurtherDown)
@@ -354,9 +344,7 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
                     pacx -= pixels
                 else if (pacx - pixels + pacBitmap.width < 0 + pacBitmap.width && pacGoFurtherLeft)
                     pacx = 0
-
             }
-
             UP -> {
                 if (pacy - pixels + pacBitmap.height >= 0 + pacBitmap.height && pacGoFurtherUp)
                     pacy -= pixels
@@ -380,7 +368,7 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
             var calculatedDirection: Int =
                 if (abs(pacx - enemy.enemyX) > abs(pacy - enemy.enemyY)) horisontalDirection else verticalDirection
 
-            var randomDirection = (1..4).random()
+            var randomDirection = (1..4).random() //Another type of movement
             when (calculatedDirection) {
                 RIGHT -> {
                     if (enemy.enemyX + pixels + enemyBitmap.width < w)
@@ -470,141 +458,94 @@ class Game(private var context: Context, view: TextView, binding: ActivityMainBi
                 running = false
                 var currentIndex = levels.indexOf(currentLevel)
                 currentLevel = levels[currentIndex + 1]
-                // Set game level to current + 1
                 newGame()
                 counter = 60
-                //binding.textView.text = "Timer value: $counter"
             }
 
         }
 
 
-    var minDistToPac = 20
+        var minDistToPac = 20
 
-    // Can go up?
-    // ----------------------------------------------------
-    wallLoop@ for (wall in walls) {
-        var wallUpX = wall.X + wallBitmap.width / 2
-        var wallUpY = wall.Y
-        var wallDownX = wall.X + wallBitmap.width / 2
-        var wallDownY = wall.Y + wallBitmap.height
-        var wallRightX = wall.X + wallBitmap.width
-        var wallRightY = wall.Y + wallBitmap.height / 2
-        var wallLeftX = wall.X
-        var wallLeftY = wall.Y + wallBitmap.height / 2
-        var wallCenterX = wall.X + wallBitmap.width / 2
-        var wallCenterY = wall.Y + wallBitmap.height / 2
-        for (x in wall.X until wall.X + wallBitmap.width) {
-            if (abs(wallDownY - pacUpY) < minDistToPac && pacCenterX > wallLeftX - pacBitmap.width / 2 && pacCenterX < wallRightX + pacBitmap.width / 2) {
-                pacy = wallDownY
-                pacGoFurtherUp = false
-                break@wallLoop
-            } else {
-                pacGoFurtherUp = true
+        // Can go up?
+        // ----------------------------------------------------
+        wallLoop@ for (wall in walls) {
+            var wallDownY = wall.Y + wallBitmap.height
+            var wallRightX = wall.X + wallBitmap.width
+            var wallLeftX = wall.X
+            for (x in wall.X until wall.X + wallBitmap.width) {
+                if (abs(wallDownY - pacUpY) < minDistToPac && pacCenterX > wallLeftX - pacBitmap.width / 2 && pacCenterX < wallRightX + pacBitmap.width / 2) {
+                    pacy = wallDownY
+                    pacGoFurtherUp = false
+                    break@wallLoop
+                } else {
+                    pacGoFurtherUp = true
+                }
             }
         }
-    }
 
-    // Can go down?
-    // ----------------------------------------------------
-    wallLoop@ for (wall in walls) {
-        var wallUpX = wall.X + wallBitmap.width / 2
-        var wallUpY = wall.Y
-        var wallDownX = wall.X + wallBitmap.width / 2
-        var wallDownY = wall.Y + wallBitmap.height
-        var wallRightX = wall.X + wallBitmap.width
-        var wallRightY = wall.Y + wallBitmap.height / 2
-        var wallLeftX = wall.X
-        var wallLeftY = wall.Y + wallBitmap.height / 2
-        var wallCenterX = wall.X + wallBitmap.width / 2
-        var wallCenterY = wall.Y + wallBitmap.height / 2
-        for (x in wall.X until wall.X + wallBitmap.width) {
-            if (abs(wallUpY - pacDownY) < minDistToPac && pacCenterX > wallLeftX - pacBitmap.width / 2 && pacCenterX < wallRightX + pacBitmap.width / 2) {
-                pacy = wallUpY-pacBitmap.height
-                pacGoFurtherDown = false
-                break@wallLoop
-            } else {
-                pacGoFurtherDown = true
+        // Can go down?
+        // ----------------------------------------------------
+        wallLoop@ for (wall in walls) {
+            var wallUpY = wall.Y
+            var wallRightX = wall.X + wallBitmap.width
+            var wallLeftX = wall.X
+            for (x in wall.X until wall.X + wallBitmap.width) {
+                if (abs(wallUpY - pacDownY) < minDistToPac && pacCenterX > wallLeftX - pacBitmap.width / 2 && pacCenterX < wallRightX + pacBitmap.width / 2) {
+                    pacy = wallUpY - pacBitmap.height
+                    pacGoFurtherDown = false
+                    break@wallLoop
+                } else {
+                    pacGoFurtherDown = true
+                }
             }
         }
-    }
 
 
-    // Can go right?
-    // ----------------------------------------------------
-    wallLoop@ for (wall in walls) {
-        var wallUpX = wall.X + wallBitmap.width / 2
-        var wallUpY = wall.Y
-        var wallDownX = wall.X + wallBitmap.width / 2
-        var wallDownY = wall.Y + wallBitmap.height
-        var wallRightX = wall.X + wallBitmap.width
-        var wallRightY = wall.Y + wallBitmap.height / 2
-        var wallLeftX = wall.X
-        var wallLeftY = wall.Y + wallBitmap.height / 2
-        var wallCenterX = wall.X + wallBitmap.width / 2
-        var wallCenterY = wall.Y + wallBitmap.height / 2
-        for (y in wall.Y until wall.Y + wallBitmap.height) {
-            if (abs(wallLeftX - pacRightX) < minDistToPac && pacCenterY > wallUpY - pacBitmap.height / 2 && pacCenterY < wallDownY + pacBitmap.height / 2) {
-                pacx = wallLeftX-pacBitmap.width
-                pacGoFurtherRight = false
-                break@wallLoop
-            } else {
-                pacGoFurtherRight = true
+        // Can go right?
+        // ----------------------------------------------------
+        wallLoop@ for (wall in walls) {
+            var wallUpY = wall.Y
+            var wallDownY = wall.Y + wallBitmap.height
+            var wallLeftX = wall.X
+            for (y in wall.Y until wall.Y + wallBitmap.height) {
+                if (abs(wallLeftX - pacRightX) < minDistToPac && pacCenterY > wallUpY - pacBitmap.height / 2 && pacCenterY < wallDownY + pacBitmap.height / 2) {
+                    pacx = wallLeftX - pacBitmap.width
+                    pacGoFurtherRight = false
+                    break@wallLoop
+                } else {
+                    pacGoFurtherRight = true
+                }
             }
         }
-    }
 
-    // Can go left?
-    // ----------------------------------------------------
-    wallLoop@ for (wall in walls) {
-        var wallUpX = wall.X + wallBitmap.width / 2
-        var wallUpY = wall.Y
-        var wallDownX = wall.X + wallBitmap.width / 2
-        var wallDownY = wall.Y + wallBitmap.height
-        var wallRightX = wall.X + wallBitmap.width
-        var wallRightY = wall.Y + wallBitmap.height / 2
-        var wallLeftX = wall.X
-        var wallLeftY = wall.Y + wallBitmap.height / 2
-        var wallCenterX = wall.X + wallBitmap.width / 2
-        var wallCenterY = wall.Y + wallBitmap.height / 2
-        for (y in wall.Y until wall.Y + wallBitmap.height) {
-            if (abs(wallRightX - pacLeftX) < minDistToPac && pacCenterY > wallUpY - pacBitmap.height / 2 && pacCenterY < wallDownY + pacBitmap.height / 2) {
-                pacx = wallRightX
-                pacGoFurtherLeft = false
-                break@wallLoop
-            } else {
-                pacGoFurtherLeft = true
+        // Can go left?
+        // ----------------------------------------------------
+        wallLoop@ for (wall in walls) {
+            var wallUpY = wall.Y
+            var wallDownY = wall.Y + wallBitmap.height
+            var wallRightX = wall.X + wallBitmap.width
+            for (y in wall.Y until wall.Y + wallBitmap.height) {
+                if (abs(wallRightX - pacLeftX) < minDistToPac && pacCenterY > wallUpY - pacBitmap.height / 2 && pacCenterY < wallDownY + pacBitmap.height / 2) {
+                    pacx = wallRightX
+                    pacGoFurtherLeft = false
+                    break@wallLoop
+                } else {
+                    pacGoFurtherLeft = true
+                }
             }
         }
-    }
 
 
     }
 
-    private fun intersecting(pacCenterX: Int, pacCenterY: Int, wall: Wall): Boolean {
-        val halfWidth = wallBitmap.width / 2
-        val halfHeight = wallBitmap.height / 2
-
-        val xDistance = Math.abs(pacCenterX - wall.X + halfWidth)
-        val yDistance = Math.abs(pacCenterY - wall.Y + halfHeight)
-
-        if (xDistance > halfWidth + pacBitmap.width / 2) return false
-        if (yDistance > halfHeight + pacBitmap.height / 2) return false
-
-        if (xDistance <= halfWidth) return true
-        if (yDistance <= halfHeight) return true
-
-        val xCornerDistance = xDistance - halfWidth
-        val yCornerDistance = yDistance - halfHeight
-        val squaredCornerDistance =
-            xCornerDistance * xCornerDistance + yCornerDistance * yCornerDistance
-        return (squaredCornerDistance <= pacBitmap.width / 2 * pacBitmap.width / 2)
-    }
 
     private fun calculateDistance(x1: Int, y1: Int, x2: Int, y2: Int): Float {
         // calculate distance and return it
 
         return hypot(x1.toFloat() - x2.toFloat(), y1.toFloat() - y2.toFloat())
+
+        // Old calculation method
 //        var c =
 //            sqrt(((x1.toFloat() - x2.toFloat()).pow(2f)) + ((y1.toFloat() - y2.toFloat()).pow(2f))).toFloat()
 //        println("c is with *: ${c}")

@@ -1,5 +1,13 @@
 package org.pondar.pacmankotlin
 
-class Level (var levelNumber: Int, var numberOfCoins : Int, var pacSpeed : Int, var enemySpeed : Int, var numberOfEnemies : Int, var numberOfWalls : Int, var allowBerry : Boolean = false) {
+class Level(
+    var levelNumber: Int,
+    var numberOfCoins: Int,
+    var pacSpeed: Int,
+    var enemySpeed: Int,
+    var numberOfEnemies: Int,
+    var numberOfWalls: Int,
+    var allowBerry: Boolean = false
+) {
 
 }
